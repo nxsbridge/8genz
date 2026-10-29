@@ -1,0 +1,10 @@
+// Cloudflare Worker voor members.8genz.com — serveert alleen de bestanden in ./public
+{
+  "name": "8genz-members",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" },
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "members.8genz.com", "custom_domain": true }
+  ]
+}

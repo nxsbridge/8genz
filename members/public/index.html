@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8genz Members</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* =====================================================================
+   CONFIG — the only part you need to edit
+   Leave supabaseUrl empty to run in DEMO mode (fake data, no login).
+   ===================================================================== */
+const CONFIG = {
+  supabaseUrl:     "https://kscmouopbzblhcndexhh.supabase.co",          // Supabase → Project Settings → API → Project URL
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzY21vdW9wYnpibGhjbmRleGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMTgxODcsImV4cCI6MjEwODc5NDE4N30.37AnYvcB6jesrpYp7eFocgH2pftBAMkoszC5tyAy_48",          // Supabase → Project Settings → API → anon public key
+  brand:           "8genz",
+  mainSiteUrl:     "https://8genz.com",             // your public site
+  upgradeUrl:      "https://8genz.com/#apply",      // where "Become a member" goes
+  supportEmail:    "support@8genz.com",
+  onboardingCallUrl: "https://calendly.com/8genz/30min", // 1-on-1 for new members
+  plans: {                                          // must match profiles.plan in the database
+    start:     { name: "Start",     line: "Daily cap for the first 10 days, then raised with you." },
+    unlimited: { name: "Unlimited", line: "No daily spend cap. No URL or page limits." }
+  },
+  topUpSteps: [
+    "Send your top-up amount and ad account ID to support.",
+    "Pay the invoice (prepaid).",
+    "Balance is live on your account within 24 hours."
+  ],
+  memberPerks: [
+    "A direct line to operators who scale their own stores",
+    "Business manager and pixel playbooks, SOPs",
+    "Partner and affiliate network with perks and intros",
+    "Monthly group call with other operators + all replays",
+    "1-on-1 onboarding call",
+    "Replacement within 24h, your balance moves with it"
+  ]
+};
+</script>
+<style>
+:root{
+  --bg:#0b0c0f; --panel:#121419; --panel2:#171a21; --line:#232733; --line2:#2d3240;
+  --ink:#eef0f4; --mute:#9aa1ae; --dim:#6b7280;
+  --acc:#4f6bff; --acc2:#7d93ff; --accsoft:rgba(79,107,255,.12);
+  --ok:#3ecf8e; --warn:#f5b84c; --err:#ff6b6b;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--acc2);text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,textarea{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;width:100%;outline:none}
+input:focus,textarea:focus{border-color:var(--acc)}
+.hidden{display:none!important}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:10px;font-weight:600;font-size:14px;transition:.15s}
+.btn-p{background:var(--acc);color:#fff}.btn-p:hover{background:#3f5bf0}
+.btn-g{border:1px solid var(--line2);color:var(--ink)}.btn-g:hover{border-color:var(--mute)}
+.btn-s{padding:8px 13px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:default}
+
+/* auth */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.auth-card{width:100%;max-width:400px}
+.logo{font-weight:700;font-size:22px;letter-spacing:-.02em;color:var(--ink)}
+.logo span{color:var(--acc2)}
+.auth h1{font-size:26px;letter-spacing:-.02em;margin:28px 0 6px}
+.auth p.sub{color:var(--mute);margin-bottom:24px}
+.tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:4px;margin-bottom:20px}
+.tabs button{flex:1;padding:9px;border-radius:8px;font-weight:600;font-size:14px;color:var(--mute)}
+.tabs button.on{background:var(--panel2);color:var(--ink)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:var(--mute);margin-bottom:6px}
+.msg{font-size:13px;margin:10px 0;padding:10px 12px;border-radius:9px}
+.msg.err{background:rgba(255,107,107,.1);color:var(--err)}
+.msg.ok{background:rgba(62,207,142,.1);color:var(--ok)}
+.link{color:var(--mute);font-size:13px;margin-top:14px;display:inline-block}
+.link:hover{color:var(--ink)}
+
+/* layout */
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.side{border-right:1px solid var(--line);padding:22px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.side .logo{padding:0 10px 22px}
+.nav button{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;border-radius:9px;color:var(--mute);font-weight:500;margin-bottom:2px}
+.nav button svg{width:18px;height:18px;flex:none}
+.nav button:hover{color:var(--ink);background:var(--panel)}
+.nav button.on{color:var(--ink);background:var(--panel2)}
+.side .foot{margin-top:auto;padding:12px;border-top:1px solid var(--line);font-size:13px}
+.side .foot .who{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tier{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;margin-top:6px}
+.tier.free{background:var(--panel2);color:var(--mute);border:1px solid var(--line2)}
+.tier.member{background:var(--accsoft);color:var(--acc2)}
+.main{padding:34px 40px 60px;max-width:1080px;width:100%}
+.mobbar{display:none}
+.bottomnav{display:none}
+
+/* content */
+.demo{background:rgba(245,184,76,.1);border:1px solid rgba(245,184,76,.3);color:var(--warn);border-radius:11px;padding:10px 14px;font-size:13px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.demo .seg{display:flex;background:rgba(0,0,0,.25);border-radius:8px;padding:3px}
+.demo .seg button{padding:5px 11px;border-radius:6px;font-weight:600;font-size:12px;color:var(--warn)}
+.demo .seg button.on{background:var(--warn);color:#1a1300}
+h2.t{font-size:28px;letter-spacing:-.02em;font-weight:700}
+p.lead{color:var(--mute);margin:6px 0 28px;max-width:640px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 14px;gap:12px}
+.sec-h h3{font-size:13px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;position:relative}
+button.card,a.card{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;color:inherit;transition:border-color .15s}
+button.card:hover,a.card:hover{border-color:var(--line2)}
+.card h4{font-size:16px;font-weight:600;margin-bottom:4px}
+.card .muted{color:var(--mute);font-size:14px}
+.card .perk{display:inline-block;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--ok);background:rgba(62,207,142,.1);padding:4px 9px;border-radius:7px}
+.card .act{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+.card.locked{background:linear-gradient(180deg,var(--panel),#0f1014)}
+.card.locked h4,.card.locked .muted{color:var(--dim)}
+.lock{position:absolute;top:18px;right:18px;color:var(--dim)}
+.lock svg{width:16px;height:16px}
+.chip{font-size:11.5px;font-weight:600;color:var(--mute);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;display:block}
+.hero{background:linear-gradient(135deg,#18204a,#121419 70%);border:1px solid #2a3570}
+.hero h4{font-size:20px}
+.ticks{list-style:none;margin:14px 0 4px}
+.ticks li{padding:5px 0 5px 26px;position:relative;font-size:14px}
+.ticks li:before{content:"";position:absolute;left:2px;top:10px;width:12px;height:7px;border-left:2px solid var(--acc2);border-bottom:2px solid var(--acc2);transform:rotate(-45deg)}
+.ladder{display:flex;gap:8px;margin-top:16px}
+.rung{flex:1;border:1px solid var(--line2);border-radius:10px;padding:12px 10px;text-align:center}
+.rung b{display:block;font-size:15px}
+.rung span{font-size:12px;color:var(--mute)}
+.rung.done{border-color:rgba(62,207,142,.4);background:rgba(62,207,142,.06)}
+.rung.now{border-color:var(--acc);background:var(--accsoft)}
+.steps{counter-reset:s;list-style:none;margin-top:12px}
+.steps li{counter-increment:s;padding:7px 0 7px 36px;position:relative;font-size:14px}
+.steps li:before{content:counter(s);position:absolute;left:0;top:6px;width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font-size:12px;font-weight:700}
+.row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .when{font-size:13px;color:var(--mute)}
+.empty{color:var(--mute);font-size:14px;padding:6px 0}
+.upsell{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:34px;padding:18px 20px;border-radius:var(--r);border:1px dashed var(--line2)}
+.upsell p{color:var(--mute);font-size:14px}
+.upsell b{color:var(--ink)}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px;z-index:50}
+.modal .box{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:24px;width:100%;max-width:440px}
+.modal h4{font-size:18px;margin-bottom:6px}
+.modal p{color:var(--mute);font-size:14px;margin-bottom:16px}
+.modal .act{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ok);color:#04160d;font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px;z-index:60}
+
+/* mobile */
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .side{display:none}
+  .mobbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}
+  .main{padding:22px 16px 100px}
+  .grid2{grid-template-columns:1fr}
+  .bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:10}
+  .bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--mute);padding:6px 0}
+  .bottomnav button svg{width:20px;height:20px}
+  .bottomnav button.on{color:var(--ink)}
+  h2.t{font-size:24px}
+  .ladder{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH ============ -->
+<div id="auth" class="auth hidden">
+  <div class="auth-card">
+    <a class="logo" id="authLogo" href="#"></a>
+
+    <div id="authMain">
+      <h1>Members area</h1>
+      <p class="sub">Free account gets you started. Members get everything.</p>
+      <div class="tabs"><button id="tabIn" class="on">Sign in</button><button id="tabUp">Create free account</button></div>
+
+      <form id="formIn">
+        <div class="field"><label>Email</label><input type="email" id="inEmail" autocomplete="email" required></div>
+        <div class="field"><label>Password</label><input type="password" id="inPass" autocomplete="current-password" required></div>
+        <div id="inMsg"></div>
+        <button class="btn btn-p" style="width:100%" type="submit">Sign in</button>
+        <a href="#" class="link" id="toForgot">Forgot password?</a>
+      </form>
+
+      <form id="formUp" class="hidden">
+        <div class="field"><label>Full name</label><input id="upName" autocomplete="name" required></div>
+        <div class="field"><label>Store or company</label><input id="upCompany" autocomplete="organization"></div>
+        <div class="field"><label>Email</label><input type="email" id="upEmail" autocomplete="email" required></div>
+        <div class="field"><label>Password (min. 8 characters)</label><input type="password" id="upPass" minlength="8" autocomplete="new-password" required></div>
+        <div id="upMsg"></div>
+        <button class="btn btn-p" style="width:100%" type="submit">Create free account</button>
+      </form>
+    </div>
+
+    <form id="formForgot" class="hidden">
+      <h1>Reset password</h1>
+      <p class="sub">We'll email you a link to set a new password.</p>
+      <div class="field"><label>Email</label><input type="email" id="fgEmail" required></div>
+      <div id="fgMsg"></div>
+      <button class="btn btn-p" style="width:100%" type="submit">Send reset link</button>
+      <a href="#" class="link" id="backIn">Back to sign in</a>
+    </form>
+
+    <form id="formNewPass" class="hidden">
+      <h1>Set a new password</h1>
+      <p class="sub">Choose a new password for your account.</p>
+      <div class="field"><label>New password (min. 8 characters)</label><input type="password" id="npPass" minlength="8" autocomplete="new-password" required></div>
+      <div id="npMsg"></div>
+      <button class="btn btn-p" style="width:100%" type="submit">Save password</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="app hidden">
+  <aside class="side">
+    <div class="logo" id="sideLogo"></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot"><div class="who" id="whoName"></div><div id="whoTier"></div></div>
+  </aside>
+  <div>
+    <div class="mobbar"><div class="logo" id="mobLogo"></div><div id="mobTier"></div></div>
+    <main class="main" id="main"></main>
+  </div>
+  <nav class="bottomnav" id="bottomnav"></nav>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+/* ===================== helpers ===================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : null;
+const DEMO = !CONFIG.supabaseUrl || !CONFIG.supabaseAnonKey;
+const sb = DEMO ? null : supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+const logoHtml = () => { const b = esc(CONFIG.brand); return b.replace(/(\d+)/, "<span>$1</span>") + " <span style='color:var(--mute);font-weight:500;font-size:.7em'>members</span>"; };
+const firstName = n => (n || "").trim().split(" ")[0] || "there";
+const fmtDate = d => new Date(d).toLocaleString("en-GB", {weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+const msg = (el, text, kind="err") => { $(el).innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""; };
+function toast(t){ const d=document.createElement("div"); d.className="toast"; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
+
+const ICON = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h10a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M4 16a4 4 0 0 1 4-4h10"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/></svg>',
+  video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+};
+const PAGES = [
+  {id:"dashboard", label:"Dashboard", icon:"home"},
+  {id:"resources", label:"Resources", icon:"book"},
+  {id:"partners",  label:"Partners",  icon:"users"},
+  {id:"coaching",  label:"Coaching",  icon:"video"},
+  {id:"account",   label:"Account",   icon:"user"}
+];
+
+/* ===================== DEMO data ===================== */
+const DEMO_DATA = {
+  partners: [
+    {id:1,category:"Finance",name:"E-com accountant (TBC)",service:"Bookkeeping and VAT/OSS for cross-border stores",description:"Specialised in EU e-commerce: OSS returns, multi-currency, quarterly reporting.",perk:"Free intake + member rate",tier:"member"},
+    {id:2,category:"Finance",name:"Payments partner (TBC)",service:"Business account built for ad top-ups",description:"Fast international transfers for ad spend, without high bank fees.",perk:"Fee-free first transfer",tier:"member"},
+    {id:3,category:"Finance",name:"Legal partner (TBC)",service:"Terms, privacy and trademark registration",description:"Standard store T&Cs, GDPR-proof privacy policy, EU trademark filing.",perk:"Fixed member pricing",tier:"member"},
+    {id:4,category:"Growth",name:"Creative studio (TBC)",service:"UGC and ad creatives that convert",description:"Hook-driven UGC, statics and video ads built for Meta.",perk:"10% off first order",tier:"member"},
+    {id:5,category:"Growth",name:"Email & SMS agency (TBC)",service:"Klaviyo flows and campaigns",description:"Welcome, abandoned cart and post-purchase flows set up in 2 weeks.",perk:"Free flow audit",tier:"member"},
+    {id:6,category:"Growth",name:"Shopify & CRO dev (TBC)",service:"Store speed and conversion rate",description:"Theme fixes, landing pages and A/B tests.",perk:"Free CRO audit",tier:"member"},
+    {id:7,category:"Operations",name:"Nexus Bridge Sourcing",service:"Product sourcing from vetted suppliers in China",description:"Supplier search, samples, QC and shipping coordination.",perk:"Priority sourcing request",tier:"free"},
+    {id:8,category:"Operations",name:"EU fulfilment / 3PL (TBC)",service:"Warehousing and fast EU delivery",description:"Store stock in the EU, 1–3 day delivery across Europe.",perk:"Reduced onboarding fee",tier:"member"},
+    {id:9,category:"Operations",name:"Customer support team (TBC)",service:"Outsourced inbox and chat support",description:"Multilingual support team working in your helpdesk.",perk:"First week free",tier:"member"}
+  ],
+  resources: [
+    {id:3,category:"Profile structures",title:"Whitelisted vs. regular ad accounts",teaser:"What the difference is and when it matters for you.",url:"https://example.com/whitelisted",tier:"free"},
+    {id:1,category:"Profile structures",title:"Business Manager setup that survives reviews",teaser:"The exact BM, page and pixel structure we use for every client.",url:"https://example.com/bm-structure",tier:"member"},
+    {id:2,category:"Profile structures",title:"Pixel protection checklist",teaser:"How to keep your pixel data when an account gets restricted.",url:"https://example.com/pixel",tier:"member"},
+    {id:4,category:"SOPs",title:"Top-up in under 24 hours",teaser:"Step by step: how to top up your account and what we need.",url:"https://example.com/top-up",tier:"member"},
+    {id:5,category:"SOPs",title:"What to do when an account gets banned",teaser:"The replacement process, start to finish.",url:"https://example.com/ban",tier:"member"},
+    {id:6,category:"Templates",title:"Scaling plan: from Start to Unlimited",teaser:"When to switch plans, and how to raise spend without killing the account.",url:"https://example.com/scaling",tier:"member"}
+  ],
+  sessions: [
+    {id:1,title:"Monthly group call: scaling past €1,000/day",starts_at:new Date(Date.now()+10*864e5).toISOString(),join_url:"https://calendly.com/8genz/30min",replay_url:null,tier:"member"},
+    {id:2,title:"Intro session: how whitelisted accounts work",starts_at:null,join_url:null,replay_url:"https://example.com/replay-intro",tier:"free"},
+    {id:3,title:"Group call replay: creative testing framework",starts_at:null,join_url:null,replay_url:"https://example.com/replay-creatives",tier:"member"}
+  ]
+};
+let demoTier = "free";
+
+/* ===================== data layer ===================== */
+// Same shape from demo and from Supabase: locked rows have their member-only fields blanked.
+function gateDemo(rows, fields, nameFn){
+  const member = demoTier === "member";
+  return rows.map(r => {
+    const open = r.tier === "free" || member;
+    const o = {...r, locked: !open};
+    if (!open){ fields.forEach(f => o[f] = null); if (nameFn) o.name = nameFn(r); }
+    return o;
+  });
+}
+const api = {
+  async profile(){
+    if (DEMO) return {full_name:"Demo User", company:"Demo Store", email:"demo@8genz.com", tier:demoTier, plan: demoTier==="member" ? "unlimited" : "none"};
+    const { data:{ user } } = await sb.auth.getUser();
+    const { data, error } = await sb.from("profiles").select("*").eq("id", user.id).single();
+    if (error) throw error; return data;
+  },
+  async partners(){
+    if (DEMO) return gateDemo(DEMO_DATA.partners, ["description","perk"], r => "Partner in " + r.category.toLowerCase());
+    const { data, error } = await sb.rpc("list_partners"); if (error) throw error; return data;
+  },
+  async resources(){
+    if (DEMO) return gateDemo(DEMO_DATA.resources, ["url"]);
+    const { data, error } = await sb.rpc("list_resources"); if (error) throw error; return data;
+  },
+  async sessions(){
+    if (DEMO) return gateDemo(DEMO_DATA.sessions, ["join_url","replay_url"]);
+    const { data, error } = await sb.rpc("list_sessions"); if (error) throw error; return data;
+  },
+  async requestIntro(partner_id, message){
+    if (DEMO) return;
+    const { error } = await sb.from("intro_requests").insert({ partner_id, message }); if (error) throw error;
+  }
+};
+
+/* ===================== state + routing ===================== */
+let PROFILE = null, CACHE = {};
+const isMember = () => PROFILE?.tier === "member";
+
+function tierBadge(){ return `<span class="tier ${isMember()?"member":"free"}">${isMember()?"Member":"Free plan"}</span>`; }
+
+function renderChrome(active){
+  const btns = p => `<button data-go="${p.id}" class="${p.id===active?"on":""}">${ICON[p.icon]}<span>${p.label}</span></button>`;
+  $("nav").innerHTML = PAGES.map(btns).join("");
+  $("bottomnav").innerHTML = PAGES.map(btns).join("");
+  $("whoName").textContent = PROFILE.full_name || PROFILE.email;
+  $("whoTier").innerHTML = tierBadge(); $("mobTier").innerHTML = tierBadge();
+}
+
+async function go(page){
+  if (!PAGES.some(p => p.id === page)) page = "dashboard";
+  if (location.hash !== "#" + page) history.replaceState(null, "", "#" + page);
+  renderChrome(page);
+  const main = $("main");
+  main.innerHTML = demoBar() + `<p class="empty">Loading…</p>`;
+  try {
+    main.innerHTML = demoBar() + await VIEWS[page]();
+  } catch (e) {
+    console.error(e);
+    main.innerHTML = demoBar() + `<div class="msg err">Something went wrong loading this page. Try again or contact ${esc(CONFIG.supportEmail)}.</div>`;
+  }
+  window.scrollTo(0,0);
+}
+
+function demoBar(){
+  if (!DEMO) return "";
+  return `<div class="demo"><span><b>Demo mode</b> — fake data, no login. Add your Supabase keys in CONFIG to go live.</span>
+    <span class="seg"><button data-demo="free" class="${demoTier==="free"?"on":""}">View as free</button><button data-demo="member" class="${demoTier==="member"?"on":""}">View as member</button></span></div>`;
+}
+
+const lockIcon = `<span class="lock" title="Members only">${ICON.lock}</span>`;
+const upgradeBtn = (label="Become a member") => `<a class="btn btn-p btn-s" href="${esc(CONFIG.upgradeUrl)}" target="_blank" rel="noopener">${label}</a>`;
+const upsell = text => isMember() ? "" : `<div class="upsell"><p>${text}</p>${upgradeBtn()}</div>`;
+const groupBy = (rows, key) => rows.reduce((m, r) => ((m[r[key]] ??= []).push(r), m), {});
+
+/* ===================== views ===================== */
+const VIEWS = {
+  async dashboard(){
+    const sessions = await api.sessions();
+    const next = sessions.filter(s => s.starts_at && new Date(s.starts_at) > new Date()).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at))[0];
+    const head = `<h2 class="t">Welcome back, ${esc(firstName(PROFILE.full_name))}</h2>`;
+
+    if (!isMember()){
+      const res = (await api.resources()).filter(r => !r.locked);
+      return head + `<p class="lead">You're on the free plan. Start with the basics below, and unlock the full toolkit when you're ready to scale.</p>
+      <div class="grid2">
+        <div class="card hero"><span class="chip">Membership</span><h4>Scale without a spend cap</h4>
+          <p class="muted">Whitelisted ad accounts, run by operators, plus everything around them.</p>
+          <ul class="ticks">${CONFIG.memberPerks.map(p=>`<li>${esc(p)}</li>`).join("")}</ul>
+          <div class="act">${upgradeBtn()}</div></div>
+        <div class="card"><span class="chip">Start here</span><h4>Free resources</h4>
+          ${res.length ? res.map(r=>`<div class="row"><span>${esc(r.title)}</span>${safeUrl(r.url)?`<a class="btn btn-g btn-s" href="${esc(r.url)}" target="_blank" rel="noopener">Open</a>`:""}</div>`).join("") : `<p class="empty">Coming soon.</p>`}
+        </div>
+      </div>
+      <div class="sec-h"><h3>Two plans</h3></div>
+      <div class="card"><p class="muted">Start lean, or go without a cap from day one. Members can switch when they outgrow Start.</p>${planCards(null)}</div>`;
+    }
+
+    return head + `<p class="lead">Here's where you stand and what's next.</p>
+    <div class="grid2">
+      <div class="card"><span class="chip">Your plan</span><h4>${CONFIG.plans[PROFILE.plan] ? esc(CONFIG.plans[PROFILE.plan].name) : "Setting up your account"}</h4>
+        <p class="muted">${PROFILE.plan === "start" ? "Outgrowing the cap? Ask us to move you to " + esc(CONFIG.plans.unlimited.name) + "." : PROFILE.plan === "unlimited" ? "No cap. Spend what your offer can carry." : "Your first account is being prepared."}</p>
+        ${planCards(PROFILE.plan)}</div>
+      <div class="card"><span class="chip">Top up</span><h4>Balance live within 24h</h4>
+        <ol class="steps">${CONFIG.topUpSteps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+        <div class="act"><a class="btn btn-g btn-s" href="mailto:${esc(CONFIG.supportEmail)}?subject=Top-up%20request">Request top-up</a></div></div>
+    </div>
+    <div class="sec-h"><h3>Next group call</h3></div>
+    <div class="card">${next ? `<div class="row"><div><h4>${esc(next.title)}</h4><div class="when">${fmtDate(next.starts_at)}</div></div>${safeUrl(next.join_url)?`<a class="btn btn-p btn-s" href="${esc(next.join_url)}" target="_blank" rel="noopener">Join / add to calendar</a>`:""}</div>` : `<p class="empty">No call scheduled yet. Replays are in Coaching.</p>`}</div>
+    <div class="sec-h"><h3>Shortcuts</h3></div>
+    <div class="grid">
+      <button class="card" data-go="resources" style="text-align:left"><h4>Resources</h4><p class="muted">Profile structures, SOPs, templates</p></button>
+      <button class="card" data-go="partners" style="text-align:left"><h4>Partners</h4><p class="muted">Request an intro, use your member perks</p></button>
+      <a class="card" href="${esc(CONFIG.onboardingCallUrl)}" target="_blank" rel="noopener" style="color:inherit"><h4>Book a 1-on-1</h4><p class="muted">Onboarding or strategy call</p></a>
+    </div>`;
+  },
+
+  async resources(){
+    const groups = groupBy(await api.resources(), "category");
+    return `<h2 class="t">Resources</h2><p class="lead">Profile structures, SOPs and templates. The exact playbook we use for our own clients.</p>` +
+      Object.entries(groups).map(([cat, rows]) => `<div class="sec-h"><h3>${esc(cat)}</h3></div><div class="grid">${rows.map(r => `
+        <div class="card ${r.locked?"locked":""}">${r.locked?lockIcon:""}
+          <h4>${esc(r.title)}</h4><p class="muted">${esc(r.teaser)}</p>
+          <div class="act">${r.locked ? upgradeBtn("Unlock") : safeUrl(r.url) ? `<a class="btn btn-g btn-s" href="${esc(r.url)}" target="_blank" rel="noopener">Open</a>` : ""}</div>
+        </div>`).join("")}</div>`).join("") +
+      upsell("<b>Members get the full playbook</b>, including the BM structure and ban procedure.");
+  },
+
+  async partners(){
+    const rows = await api.partners(); CACHE.partners = rows;
+    const groups = groupBy(rows, "category");
+    return `<h2 class="t">Partner network</h2><p class="lead">Vetted partners for everything around your ads. Request an intro and we'll connect you personally, with your member perk.</p>` +
+      Object.entries(groups).map(([cat, list]) => `<div class="sec-h"><h3>${esc(cat)}</h3></div><div class="grid">${list.map(p => `
+        <div class="card ${p.locked?"locked":""}">${p.locked?lockIcon:""}
+          <h4>${esc(p.name)}</h4><p class="muted">${esc(p.service)}</p>
+          ${p.description?`<p class="muted" style="margin-top:8px">${esc(p.description)}</p>`:""}
+          ${p.perk?`<span class="perk">${esc(p.perk)}</span>`:""}
+          <div class="act">${p.locked ? upgradeBtn("Unlock") : isMember() ? `<button class="btn btn-g btn-s" data-intro="${p.id}">Request intro</button>` : upgradeBtn("Members can request intros")}</div>
+        </div>`).join("")}</div>`).join("") +
+      upsell("<b>Members get every partner, their perks and a personal intro.</b>");
+  },
+
+  async coaching(){
+    const rows = await api.sessions();
+    const upcoming = rows.filter(s => s.starts_at && new Date(s.starts_at) > new Date());
+    const replays = rows.filter(s => !s.starts_at || new Date(s.starts_at) <= new Date());
+    const item = s => `<div class="row"><div><h4 style="font-size:15px;${s.locked?"color:var(--dim)":""}">${s.locked?`<span style="display:inline-block;width:14px;margin-right:6px;vertical-align:-2px">${ICON.lock}</span>`:""}${esc(s.title)}</h4>${s.starts_at?`<div class="when">${fmtDate(s.starts_at)}</div>`:""}</div>
+      ${s.locked ? upgradeBtn("Unlock") : safeUrl(s.join_url) && upcoming.includes(s) ? `<a class="btn btn-p btn-s" href="${esc(s.join_url)}" target="_blank" rel="noopener">Join</a>` : safeUrl(s.replay_url) ? `<a class="btn btn-g btn-s" href="${esc(s.replay_url)}" target="_blank" rel="noopener">Watch</a>` : ""}</div>`;
+    return `<h2 class="t">Coaching</h2><p class="lead">A monthly group call on scaling, plus a 1-on-1 when you join. Every call is recorded.</p>
+      ${isMember()?`<div class="card hero"><div class="row" style="border:0;padding:0"><div><h4>Book your 1-on-1</h4><p class="muted">Onboarding or a strategy check-in.</p></div><a class="btn btn-p btn-s" href="${esc(CONFIG.onboardingCallUrl)}" target="_blank" rel="noopener">Book</a></div></div>`:""}
+      <div class="sec-h"><h3>Upcoming</h3></div><div class="card">${upcoming.length?upcoming.map(item).join(""):`<p class="empty">Nothing scheduled right now.</p>`}</div>
+      <div class="sec-h"><h3>Replays</h3></div><div class="card">${replays.length?replays.map(item).join(""):`<p class="empty">No replays yet.</p>`}</div>` +
+      upsell("<b>Members join every call live</b> and get all replays.");
+  },
+
+  async account(){
+    return `<h2 class="t">Account</h2><p class="lead">Your details and plan.</p>
+      <div class="grid2">
+        <div class="card"><span class="chip">Profile</span>
+          <div class="row"><span class="muted">Name</span><span>${esc(PROFILE.full_name||"–")}</span></div>
+          <div class="row"><span class="muted">Company</span><span>${esc(PROFILE.company||"–")}</span></div>
+          <div class="row"><span class="muted">Email</span><span>${esc(PROFILE.email)}</span></div>
+          <p class="muted" style="margin-top:12px;font-size:13px">To change your details, email ${esc(CONFIG.supportEmail)}.</p></div>
+        <div class="card"><span class="chip">Plan</span><h4>${isMember()?"Member":"Free plan"}</h4>
+          <p class="muted">${isMember()?"You have full access.":"Upgrade to unlock the full toolkit."}</p>
+          <div class="act">${isMember()?`<a class="btn btn-g btn-s" href="mailto:${esc(CONFIG.supportEmail)}">Contact support</a>`:upgradeBtn()}
+          <button class="btn btn-g btn-s" id="signOut">Sign out</button></div></div>
+      </div>`;
+  }
+};
+
+function planCards(current){
+  return `<div class="ladder">${Object.entries(CONFIG.plans).map(([k,p])=>`<div class="rung ${k===current?"now":""}"><b>${esc(p.name)}${k===current?" · yours":""}</b><span>${esc(p.line)}</span></div>`).join("")}</div>`;
+}
+
+/* ===================== intro modal ===================== */
+function openIntro(id){
+  const p = (CACHE.partners||[]).find(x => String(x.id) === String(id)); if (!p) return;
+  $("modalRoot").innerHTML = `<div class="modal"><form class="box" id="introForm">
+    <h4>Intro to ${esc(p.name)}</h4><p>Tell us briefly what you need. We'll introduce you personally, usually within 1 business day.</p>
+    <textarea id="introMsg" rows="4" placeholder="e.g. I need help with OSS VAT for 4 EU countries." required></textarea>
+    <div id="introErr"></div>
+    <div class="act"><button type="button" class="btn btn-g btn-s" id="introCancel">Cancel</button><button class="btn btn-p btn-s" type="submit">Send request</button></div>
+  </form></div>`;
+  $("introMsg").focus();
+  $("introCancel").onclick = () => $("modalRoot").innerHTML = "";
+  $("introForm").onsubmit = async e => {
+    e.preventDefault(); const b = e.submitter; b.disabled = true;
+    try { await api.requestIntro(p.id, $("introMsg").value.trim()); $("modalRoot").innerHTML = ""; toast("Request sent. We'll be in touch."); }
+    catch(err){ console.error(err); msg("introErr", "Couldn't send. Try again."); b.disabled = false; }
+  };
+}
+
+/* ===================== events ===================== */
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-go]"); if (g){ e.preventDefault(); go(g.dataset.go); return; }
+  const d = e.target.closest("[data-demo]"); if (d){ demoTier = d.dataset.demo; enterApp(); return; }
+  const i = e.target.closest("[data-intro]"); if (i){ openIntro(i.dataset.intro); return; }
+  if (e.target.closest("#signOut")) signOut();
+});
+window.addEventListener("hashchange", () => { if (PROFILE) go(location.hash.slice(1)); });
+
+/* ===================== auth ===================== */
+function showAuth(view="main"){
+  $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
+  $("authMain").classList.toggle("hidden", view!=="main");
+  $("formForgot").classList.toggle("hidden", view!=="forgot");
+  $("formNewPass").classList.toggle("hidden", view!=="newpass");
+}
+function tab(which){
+  $("tabIn").classList.toggle("on", which==="in"); $("tabUp").classList.toggle("on", which==="up");
+  $("formIn").classList.toggle("hidden", which!=="in"); $("formUp").classList.toggle("hidden", which!=="up");
+}
+$("tabIn").onclick = () => tab("in");
+$("tabUp").onclick = () => tab("up");
+$("toForgot").onclick = e => { e.preventDefault(); showAuth("forgot"); };
+$("backIn").onclick = e => { e.preventDefault(); showAuth("main"); };
+
+$("formIn").onsubmit = async e => {
+  e.preventDefault(); msg("inMsg", "");
+  const { error } = await sb.auth.signInWithPassword({ email: $("inEmail").value.trim(), password: $("inPass").value });
+  if (error) msg("inMsg", error.message === "Email not confirmed" ? "Please confirm your email first. Check your inbox." : "Wrong email or password.");
+};
+$("formUp").onsubmit = async e => {
+  e.preventDefault(); msg("upMsg", "");
+  const { data, error } = await sb.auth.signUp({
+    email: $("upEmail").value.trim(), password: $("upPass").value,
+    options: { data: { full_name: $("upName").value.trim(), company: $("upCompany").value.trim() }, emailRedirectTo: location.origin + location.pathname }
+  });
+  if (error) return msg("upMsg", error.message);
+  if (!data.session) msg("upMsg", "Almost there. Check your inbox to confirm your email.", "ok");
+};
+$("formForgot").onsubmit = async e => {
+  e.preventDefault();
+  await sb.auth.resetPasswordForEmail($("fgEmail").value.trim(), { redirectTo: location.origin + location.pathname });
+  msg("fgMsg", "If that email has an account, a reset link is on its way.", "ok");
+};
+$("formNewPass").onsubmit = async e => {
+  e.preventDefault();
+  const { error } = await sb.auth.updateUser({ password: $("npPass").value });
+  if (error) return msg("npMsg", error.message);
+  RECOVERING = false; history.replaceState(null, "", location.pathname);
+  toast("Password saved."); enterApp();
+};
+
+let ENTERING = false;
+async function enterApp(){
+  if (ENTERING) return; ENTERING = true;
+  try { PROFILE = await api.profile(); }
+  catch(e){ console.error(e); showAuth(); msg("inMsg", "Couldn't load your account. Try signing in again."); return; }
+  finally { ENTERING = false; }
+  $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
+  go(location.hash.slice(1) || "dashboard");
+}
+async function signOut(){
+  if (DEMO) return toast("Demo mode: nothing to sign out of.");
+  await sb.auth.signOut(); PROFILE = null; history.replaceState(null, "", location.pathname); showAuth();
+}
+
+/* ===================== boot ===================== */
+["authLogo","sideLogo","mobLogo"].forEach(id => $(id).innerHTML = logoHtml());
+$("authLogo").href = CONFIG.mainSiteUrl;
+
+let RECOVERING = /type=recovery/.test(location.hash);   // arrived via "reset password" email
+(async () => {
+  if (DEMO) return enterApp();
+  sb.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") { RECOVERING = true; return showAuth("newpass"); }
+    if (event === "SIGNED_IN" && !PROFILE && !RECOVERING) setTimeout(enterApp, 0);
+    if (event === "SIGNED_OUT") { PROFILE = null; showAuth(); }
+  });
+  const { data:{ session } } = await sb.auth.getSession();
+  if (RECOVERING) showAuth("newpass");
+  else if (session && !PROFILE) enterApp();
+  else if (!session) showAuth();
+})();
+</script>
+</body>
+</html>
